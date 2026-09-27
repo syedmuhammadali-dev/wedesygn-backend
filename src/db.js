@@ -1,12 +1,16 @@
-const mysql = require('mysql2/promise');
+const mysql = require("mysql2/promise");
 
-const requiredVariables = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+const requiredVariables = ["DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD"];
 
 function getDatabaseConfig() {
-  const missingVariables = requiredVariables.filter((variable) => !process.env[variable]);
+  const missingVariables = requiredVariables.filter(
+    (variable) => !process.env[variable],
+  );
 
   if (missingVariables.length > 0) {
-    throw new Error(`Missing database environment variables: ${missingVariables.join(', ')}`);
+    throw new Error(
+      `Missing database environment variables: ${missingVariables.join(", ")}`,
+    );
   }
 
   return {

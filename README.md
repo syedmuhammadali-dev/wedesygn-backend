@@ -151,6 +151,17 @@ Error responses:
 
 `POST /api/users` is also available as a backwards-compatible alias.
 
+### List Users
+
+Returns saved users for an authenticated administrator. Set a private `ADMIN_API_KEY` in the environment first.
+
+```http
+GET /api/users?limit=20&offset=0
+x-admin-key: your_private_admin_key
+```
+
+The endpoint returns up to 100 records per request and must not be exposed to an untrusted frontend.
+
 ## Available Scripts
 
 | Command           | Description                          |

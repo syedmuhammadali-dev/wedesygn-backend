@@ -5,6 +5,43 @@ const { getPool } = require("../db");
 const router = express.Router();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+router.get("/", async (request, response) => {
+  const adminKey = process.env.ADMIN_API_KEY;
+
+  if (!adminKey || request.get("x-admin-key") !== adminKey) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+
+  const limit = Math.min(
+    Math.max(Number.parseInt(request.query.limit, 10) || 20, 1),
+    100,
+  );
+  const offset = Math.max(Number.parseInt(request.query.offset, 10) || 0, 0);
+
+  try {
+    const [users] = await getPool().query(
+      `SELECT id, name, email, interested_in AS interestedIn,
+              budget_in_usd AS budgetInUsd, project_details AS projectDetails,
+              created_at AS createdAt, updated_at AS updatedAt
+       FROM users
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset],
+    );
+    const [[count]] = await getPool().query(
+      "SELECT COUNT(*) AS total FROM users",
+    );
+
+    return response.json({
+      users,
+      pagination: { total: Number(count.total), limit, offset },
+    });
+  } catch (error) {
+    console.error("User listing failed:", error.message);
+    return response.status(500).json({ error: "Unable to load users" });
+  }
+});
+
 router.post("/", async (request, response) => {
   const { name, email, interestedIn, budgetInUsd, budget, projectDetails } =
     request.body || {};
