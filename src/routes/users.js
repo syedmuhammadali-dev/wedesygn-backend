@@ -6,7 +6,7 @@ const router = express.Router();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 router.post("/", async (request, response) => {
-  const { name, email, interestedIn, budget, projectDetails } =
+  const { name, email, interestedIn, budgetInUsd, budget, projectDetails } =
     request.body || {};
 
   const normalizedName = typeof name === "string" ? name.trim() : "";
@@ -14,7 +14,12 @@ router.post("/", async (request, response) => {
     typeof email === "string" ? email.trim().toLowerCase() : "";
   const normalizedInterestedIn =
     typeof interestedIn === "string" ? interestedIn.trim() : null;
-  const normalizedBudget = typeof budget === "string" ? budget.trim() : null;
+  const normalizedBudgetInUsd =
+    typeof budgetInUsd === "string"
+      ? budgetInUsd.trim()
+      : typeof budget === "string"
+        ? budget.trim()
+        : null;
   const normalizedProjectDetails =
     typeof projectDetails === "string" ? projectDetails.trim() : null;
 
@@ -30,13 +35,13 @@ router.post("/", async (request, response) => {
 
   try {
     const [result] = await getPool().execute(
-      `INSERT INTO users (name, email, interested_in, budget, project_details)
+      `INSERT INTO users (name, email, interested_in, budget_in_usd, project_details)
        VALUES (?, ?, ?, ?, ?)`,
       [
         normalizedName,
         normalizedEmail,
         normalizedInterestedIn || null,
-        normalizedBudget || null,
+        normalizedBudgetInUsd || null,
         normalizedProjectDetails || null,
       ],
     );
@@ -48,7 +53,7 @@ router.post("/", async (request, response) => {
         name: normalizedName,
         email: normalizedEmail,
         interestedIn: normalizedInterestedIn,
-        budget: normalizedBudget,
+        budgetInUsd: normalizedBudgetInUsd,
         projectDetails: normalizedProjectDetails,
       },
     });

@@ -8,7 +8,7 @@ const createUsersTable = `
     name VARCHAR(120) NOT NULL,
     email VARCHAR(255) NOT NULL,
     interested_in VARCHAR(120) NULL,
-    budget VARCHAR(80) NULL,
+    budget_in_usd VARCHAR(80) NULL,
     project_details TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

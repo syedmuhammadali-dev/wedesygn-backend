@@ -40,7 +40,7 @@ Content-Type: application/json
 	"name": "Ali Mazhar",
 	"email": "ali@example.com",
 	"interestedIn": "Web design",
-	"budget": "$1,000 - $5,000",
+	"budgetInUsd": "$1,000 - $5,000",
 	"projectDetails": "Project requirements go here"
 }
 ```
