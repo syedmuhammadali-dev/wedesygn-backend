@@ -1,0 +1,18 @@
+{
+  "name": "wedesygn-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Express backend deployed on Vercel",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0"
+  }
+}
