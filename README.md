@@ -24,6 +24,10 @@ GET http://localhost:3000/api/health
 
 Copy `.env.example` to `.env` and update values as needed. `.env` is ignored by Git.
 
+`CORS_ORIGIN` accepts one origin or multiple comma-separated origins. The current configuration allows local development and `https://wedesygn-backend.vercel.app`. Add your frontend URL here before connecting a separate deployed frontend.
+
+The API also enables Helmet security headers by default.
+
 ## Deploy to Vercel
 
 1. Import this repository into Vercel.

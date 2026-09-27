@@ -1,10 +1,28 @@
 require('dotenv').config();
 
 const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
 
 const app = express();
+const allowedOrigins = (process.env.CORS_ORIGIN || '*')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin: (requestOrigin, callback) => {
+    if (!requestOrigin || allowedOrigins.includes('*') || allowedOrigins.includes(requestOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Origin is not allowed by CORS'));
+  },
+};
 
 app.disable('x-powered-by');
+app.use(helmet());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get('/api/health', (_request, response) => {
