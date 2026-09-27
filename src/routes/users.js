@@ -1,31 +1,31 @@
-const express = require('express');
+const express = require("express");
 
-const { getPool } = require('../db');
+const { getPool } = require("../db");
 
 const router = express.Router();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-router.post('/', async (request, response) => {
-  const {
-    name,
-    email,
-    interestedIn,
-    budget,
-    projectDetails,
-  } = request.body || {};
+router.post("/", async (request, response) => {
+  const { name, email, interestedIn, budget, projectDetails } =
+    request.body || {};
 
-  const normalizedName = typeof name === 'string' ? name.trim() : '';
-  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-  const normalizedInterestedIn = typeof interestedIn === 'string' ? interestedIn.trim() : null;
-  const normalizedBudget = typeof budget === 'string' ? budget.trim() : null;
-  const normalizedProjectDetails = typeof projectDetails === 'string' ? projectDetails.trim() : null;
+  const normalizedName = typeof name === "string" ? name.trim() : "";
+  const normalizedEmail =
+    typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedInterestedIn =
+    typeof interestedIn === "string" ? interestedIn.trim() : null;
+  const normalizedBudget = typeof budget === "string" ? budget.trim() : null;
+  const normalizedProjectDetails =
+    typeof projectDetails === "string" ? projectDetails.trim() : null;
 
   if (!normalizedName || normalizedName.length > 120) {
-    return response.status(400).json({ error: 'Name is required and must be 120 characters or fewer' });
+    return response
+      .status(400)
+      .json({ error: "Name is required and must be 120 characters or fewer" });
   }
 
   if (!emailPattern.test(normalizedEmail) || normalizedEmail.length > 255) {
-    return response.status(400).json({ error: 'A valid email is required' });
+    return response.status(400).json({ error: "A valid email is required" });
   }
 
   try {
@@ -42,7 +42,7 @@ router.post('/', async (request, response) => {
     );
 
     return response.status(201).json({
-      message: 'User details saved successfully',
+      message: "User details saved successfully",
       user: {
         id: result.insertId,
         name: normalizedName,
@@ -53,12 +53,14 @@ router.post('/', async (request, response) => {
       },
     });
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return response.status(409).json({ error: 'A user with this email already exists' });
+    if (error.code === "ER_DUP_ENTRY") {
+      return response
+        .status(409)
+        .json({ error: "A user with this email already exists" });
     }
 
-    console.error('User creation failed:', error.message);
-    return response.status(500).json({ error: 'Unable to save user details' });
+    console.error("User creation failed:", error.message);
+    return response.status(500).json({ error: "Unable to save user details" });
   }
 });
 

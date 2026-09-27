@@ -31,7 +31,7 @@ GET http://localhost:3000/api/health
 Submit the contact form details with:
 
 ```text
-POST http://localhost:3000/api/users
+POST http://localhost:3000/api/create-user
 Content-Type: application/json
 ```
 
@@ -46,6 +46,8 @@ Content-Type: application/json
 ```
 
 The endpoint returns `201` after saving the record to the `users` table.
+
+`POST /api/users` remains available as a backwards-compatible alias.
 
 ## Environment
 

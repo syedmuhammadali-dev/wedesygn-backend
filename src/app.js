@@ -26,6 +26,7 @@ app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/api/users', usersRouter);
+app.use('/api/create-user', usersRouter);
 
 app.get('/api/health', (_request, response) => {
   response.status(200).json({
