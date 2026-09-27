@@ -26,6 +26,27 @@ Health endpoint:
 GET http://localhost:3000/api/health
 ```
 
+## Create user
+
+Submit the contact form details with:
+
+```text
+POST http://localhost:3000/api/users
+Content-Type: application/json
+```
+
+```json
+{
+	"name": "Ali Mazhar",
+	"email": "ali@example.com",
+	"interestedIn": "Web design",
+	"budget": "$1,000 - $5,000",
+	"projectDetails": "Project requirements go here"
+}
+```
+
+The endpoint returns `201` after saving the record to the `users` table.
+
 ## Environment
 
 Copy `.env.example` to `.env` and update values as needed. `.env` is ignored by Git.

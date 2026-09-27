@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const usersRouter = require('./routes/users');
 
 const app = express();
 const allowedOrigins = (process.env.CORS_ORIGIN || '*')
@@ -24,6 +25,7 @@ app.disable('x-powered-by');
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use('/api/users', usersRouter);
 
 app.get('/api/health', (_request, response) => {
   response.status(200).json({
