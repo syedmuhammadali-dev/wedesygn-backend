@@ -5,7 +5,7 @@
   "description": "Express backend deployed on Vercel",
   "main": "src/server.js",
   "scripts": {
-    "dev": "node --watch src/server.js",
+    "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },
   "engines": {
@@ -14,5 +14,8 @@
   "dependencies": {
     "dotenv": "^16.6.1",
     "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }
