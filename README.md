@@ -55,16 +55,16 @@ npm run db:init
 
 The table contains:
 
-| Column | Type | Required |
-| --- | --- | --- |
-| `id` | `BIGINT` | Yes |
-| `name` | `VARCHAR(120)` | Yes |
-| `email` | `VARCHAR(255)` | Yes, unique |
-| `interested_in` | `VARCHAR(120)` | No |
-| `budget_in_usd` | `VARCHAR(80)` | No |
-| `project_details` | `TEXT` | No |
-| `created_at` | `TIMESTAMP` | Yes |
-| `updated_at` | `TIMESTAMP` | Yes |
+| Column            | Type           | Required    |
+| ----------------- | -------------- | ----------- |
+| `id`              | `BIGINT`       | Yes         |
+| `name`            | `VARCHAR(120)` | Yes         |
+| `email`           | `VARCHAR(255)` | Yes, unique |
+| `interested_in`   | `VARCHAR(120)` | No          |
+| `budget_in_usd`   | `VARCHAR(80)`  | No          |
+| `project_details` | `TEXT`         | No          |
+| `created_at`      | `TIMESTAMP`    | Yes         |
+| `updated_at`      | `TIMESTAMP`    | Yes         |
 
 For hosted MySQL, add the machine or platform IP that will connect to MySQL in the provider's **Remote MySQL Access** allowlist. Vercel deployments may require a Vercel-compatible outbound access configuration.
 
@@ -153,12 +153,12 @@ Error responses:
 
 ## Available Scripts
 
-| Command | Description |
-| --- | --- |
-| `npm install` | Install dependencies |
-| `npm run dev` | Start the Nodemon development server |
-| `npm start` | Start the production server |
-| `npm run db:init` | Create the `users` table |
+| Command           | Description                          |
+| ----------------- | ------------------------------------ |
+| `npm install`     | Install dependencies                 |
+| `npm run dev`     | Start the Nodemon development server |
+| `npm start`       | Start the production server          |
+| `npm run db:init` | Create the `users` table             |
 
 ## Vercel Deployment
 
