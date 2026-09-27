@@ -14,6 +14,12 @@ npm install
 npm run dev
 ```
 
+Initialize the MySQL `users` table after setting the database variables:
+
+```bash
+npm run db:init
+```
+
 Health endpoint:
 
 ```text
@@ -27,6 +33,18 @@ Copy `.env.example` to `.env` and update values as needed. `.env` is ignored by 
 `CORS_ORIGIN` accepts one origin or multiple comma-separated origins. The current configuration allows local development and `https://wedesygn-backend.vercel.app`. Add your frontend URL here before connecting a separate deployed frontend.
 
 The API also enables Helmet security headers by default.
+
+Set these private variables in `.env` locally and in Vercel Project Settings:
+
+```env
+DB_HOST=sdb-60.hosting.stackcp.net
+DB_PORT=3306
+DB_NAME=your_database_name
+DB_USER=your_database_user
+DB_PASSWORD=your_database_password
+```
+
+The database user must have permission to create tables. Never commit `.env` or expose the database password in source control.
 
 ## Deploy to Vercel
 
