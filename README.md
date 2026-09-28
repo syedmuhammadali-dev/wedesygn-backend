@@ -23,7 +23,7 @@ DB_PASSWORD=your_database_password
 ADMIN_API_KEY=your_private_admin_key
 ```
 
-`CORS_ORIGIN` accepts `*`, one origin, or a comma-separated list of allowed origins. PHP does not automatically load `.env`; provide the values through your shell or hosting environment. Never commit `.env`.
+`CORS_ORIGIN` accepts `*`, one origin, or a comma-separated list of allowed origins. The API reads `.env` from the directory one level above `public_html` (preferred), or from `public_html` as a local-development fallback. Hosting-provided environment variables take precedence. Never place `.env` inside `public_html` or commit it.
 
 Create the `users` table after setting the database variables:
 
@@ -41,7 +41,7 @@ Start PHP's built-in server with the API front controller:
 php -S localhost:3000 api/index.php
 ```
 
-For Windows PowerShell, set environment values in the current shell before running PHP, for example:
+For Windows PowerShell, set environment values in the current shell before running PHP if you are not using a local `.env` file, for example:
 
 ```powershell
 $env:DB_HOST = "your_mysql_host"

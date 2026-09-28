@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../api/env.php';
+
 $required = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
 $missing = array_filter($required, static fn(string $key): bool => getenv($key) === false || getenv($key) === '');
 if ($missing !== []) {
