@@ -1,84 +1,70 @@
 # Wedesygn Backend
 
-> Express REST API for the Wedesygn contact form, backed by MySQL and ready for Vercel.
-
-## Features
-
-- Express 5 API
-- MySQL connection pooling with `mysql2`
-- Contact form user submission endpoint
-- CORS configuration through environment variables
-- Helmet security headers
-- Nodemon development workflow
-- Vercel serverless deployment support
+PHP REST API for the Wedesygn contact form, backed by MySQL and deployable to Vercel with the community PHP runtime.
 
 ## Requirements
 
-- Node.js 20 or newer
-- npm
-- A MySQL database with remote access enabled
+- PHP 8.2 or newer with PDO MySQL and mbstring enabled
+- MySQL database
+- Vercel CLI for deployment
 
-## Installation
+## Configuration
 
-```bash
-npm install
-```
-
-Create a local `.env` file from `.env.example` and fill in the database credentials. Never commit `.env`.
-
-## Environment Variables
+Set these environment variables in your local shell and in Vercel Project Settings:
 
 ```env
 NODE_ENV=development
-PORT=3000
 CORS_ORIGIN=http://localhost:5173
-DB_HOST=mysql.gb.stackcp.com
-DB_PORT=39952
+DB_HOST=your_mysql_host
+DB_PORT=3306
 DB_NAME=your_database_name
 DB_USER=your_database_user
 DB_PASSWORD=your_database_password
+ADMIN_API_KEY=your_private_admin_key
 ```
 
-`CORS_ORIGIN` accepts one origin or a comma-separated list of origins:
+`CORS_ORIGIN` accepts `*`, one origin, or a comma-separated list of allowed origins. PHP does not automatically load `.env`; provide the values through your shell or hosting environment. Never commit `.env`.
 
-```env
-CORS_ORIGIN=http://localhost:5173,https://your-frontend.vercel.app
-```
-
-## Database Setup
-
-After the database variables are configured, create the `users` table:
+Create the `users` table after setting the database variables:
 
 ```bash
-npm run db:init
+php scripts/init-db.php
 ```
 
-The table contains:
-
-| Column            | Type           | Required    |
-| ----------------- | -------------- | ----------- |
-| `id`              | `BIGINT`       | Yes         |
-| `name`            | `VARCHAR(120)` | Yes         |
-| `email`           | `VARCHAR(255)` | Yes, unique |
-| `interested_in`   | `VARCHAR(120)` | No          |
-| `budget_in_usd`   | `VARCHAR(80)`  | No          |
-| `project_details` | `TEXT`         | No          |
-| `created_at`      | `TIMESTAMP`    | Yes         |
-| `updated_at`      | `TIMESTAMP`    | Yes         |
-
-For hosted MySQL, add the machine or platform IP that will connect to MySQL in the provider's **Remote MySQL Access** allowlist. Vercel deployments may require a Vercel-compatible outbound access configuration.
+The table columns are `id`, `name`, `email`, `interested_in`, `budget_in_usd`, `project_details`, `created_at`, and `updated_at`. Email addresses are unique.
 
 ## Local Development
 
-Start the server with Nodemon:
+Start PHP's built-in server with the API front controller:
 
 ```bash
-npm run dev
+php -S localhost:3000 api/index.php
 ```
 
-The local server runs on `http://localhost:3000` by default.
+For Windows PowerShell, set environment values in the current shell before running PHP, for example:
+
+```powershell
+$env:DB_HOST = "your_mysql_host"
+$env:DB_PORT = "3306"
+$env:DB_NAME = "your_database_name"
+$env:DB_USER = "your_database_user"
+$env:DB_PASSWORD = "your_database_password"
+$env:ADMIN_API_KEY = "your_private_admin_key"
+php scripts/init-db.php
+php -S localhost:3000 api/index.php
+```
 
 ## API Reference
+
+There are **5 API operations** across **3 URL paths**. `/api/users` and `/api/create-user` are aliases for the same user operations.
+
+| Method | Path | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/health` | Public | Health and service status |
+| `POST` | `/api/create-user` | Public | Save contact form details |
+| `POST` | `/api/users` | Public | Backwards-compatible create alias |
+| `GET` | `/api/users` | `x-admin-key` required | List users with pagination |
+| `GET` | `/api/create-user` | `x-admin-key` required | Backwards-compatible list alias |
 
 ### Health Check
 
@@ -86,15 +72,7 @@ The local server runs on `http://localhost:3000` by default.
 GET /api/health
 ```
 
-Example:
-
-```text
-https://wedesygn-backend.vercel.app/api/health
-```
-
 ### Create User
-
-Saves contact form details to the `users` table.
 
 ```http
 POST /api/create-user
@@ -113,82 +91,26 @@ Request body:
 }
 ```
 
-Example request:
-
-```bash
-curl -X POST https://wedesygn-backend.vercel.app/api/create-user \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Ali Mazhar",
-    "email": "ali@example.com",
-    "interestedIn": "Web design",
-    "budgetInUsd": "$1,000 - $5,000",
-    "projectDetails": "Project requirements go here"
-  }'
-```
-
-Successful response: `201 Created`
-
-```json
-{
-  "message": "User details saved successfully",
-  "user": {
-    "id": 1,
-    "name": "Ali Mazhar",
-    "email": "ali@example.com",
-    "interestedIn": "Web design",
-    "budgetInUsd": "$1,000 - $5,000",
-    "projectDetails": "Project requirements go here"
-  }
-}
-```
-
-Error responses:
-
-- `400 Bad Request`: missing name or invalid email
-- `409 Conflict`: email already exists
-- `500 Internal Server Error`: database or server failure
-
-`POST /api/users` is also available as a backwards-compatible alias.
+The legacy `budget` field is also accepted in place of `budgetInUsd`. A successful request returns `201 Created`. Invalid name/email returns `400`, duplicate email returns `409`, and database failures return `500`.
 
 ### List Users
-
-Returns saved users for an authenticated administrator. Set a private `ADMIN_API_KEY` in the environment first.
 
 ```http
 GET /api/users?limit=20&offset=0
 x-admin-key: your_private_admin_key
 ```
 
-The endpoint returns up to 100 records per request and must not be exposed to an untrusted frontend.
-
-## Available Scripts
-
-| Command           | Description                          |
-| ----------------- | ------------------------------------ |
-| `npm install`     | Install dependencies                 |
-| `npm run dev`     | Start the Nodemon development server |
-| `npm start`       | Start the production server          |
-| `npm run db:init` | Create the `users` table             |
+The endpoint returns up to 100 records per request, newest first, with a total count. Keep this admin endpoint private and do not expose the API key in frontend code.
 
 ## Vercel Deployment
 
-1. Import the repository into Vercel.
-2. Set the project root to the `backend` directory if required.
-3. Add `NODE_ENV`, `CORS_ORIGIN`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` under Vercel Project Settings > Environment Variables.
-4. Make sure the MySQL provider allows connections from the deployment environment.
-5. Deploy or redeploy the project.
-
-Production endpoints:
-
-```text
-GET  https://wedesygn-backend.vercel.app/api/health
-POST https://wedesygn-backend.vercel.app/api/create-user
-```
+1. Import this repository into Vercel.
+2. Add `CORS_ORIGIN`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and `ADMIN_API_KEY` under Project Settings > Environment Variables.
+3. Make sure the MySQL provider allows connections from the deployment environment.
+4. Deploy or redeploy. `vercel.json` configures `vercel-php@0.9.0` and routes requests to `api/index.php`.
 
 ## Security Notes
 
-- Keep `.env` out of Git; it is already ignored.
-- Do not expose database credentials in frontend code or API responses.
+- Keep database credentials and `ADMIN_API_KEY` out of frontend code and version control.
+- Restrict `CORS_ORIGIN` to your real frontend origin in production.
 - Use a restricted database user for the application.
-- Set `CORS_ORIGIN` to the real frontend origin in production instead of using `*`.
