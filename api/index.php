@@ -75,7 +75,7 @@ function sendUserNotification(string $name, string $email, ?string $interestedIn
         $from = 'hello@wedesygn.com';
     }
 
-    $subject = 'New project enquiry — Wedesygn';
+    $subject = 'New project enquiry — wedesygn';
     $message = implode("\n", [
         'A new project enquiry was submitted on wedesygn.com.',
         '',
@@ -88,11 +88,11 @@ function sendUserNotification(string $name, string $email, ?string $interestedIn
         $projectDetails ?: 'Not provided',
     ]);
     $headers = implode("\r\n", [
-        'From: Wedesygn <' . $from . '>',
+        'From: wedesygn <' . $from . '>',
         'Reply-To: ' . $email,
         'MIME-Version: 1.0',
         'Content-Type: text/plain; charset=UTF-8',
-        'X-Mailer: Wedesygn PHP backend',
+        'X-Mailer: wedesygn PHP backend',
     ]);
 
     return mail(implode(',', $recipients), $subject, $message, $headers);

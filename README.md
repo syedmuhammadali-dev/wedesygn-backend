@@ -1,6 +1,6 @@
-# Wedesygn Backend
+# wedesygn Backend
 
-PHP REST API for the Wedesygn contact form, backed by MySQL and deployable to Vercel with the community PHP runtime.
+PHP REST API for the wedesygn contact form, backed by MySQL and deployable to Vercel with the community PHP runtime.
 
 ## Requirements
 
