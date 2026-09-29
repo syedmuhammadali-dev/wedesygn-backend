@@ -21,6 +21,8 @@ DB_NAME=your_database_name
 DB_USER=your_database_user
 DB_PASSWORD=your_database_password
 ADMIN_API_KEY=your_private_admin_key
+MAIL_TO=hello@wedesygn.com,wedesygnofficial@gmail.com
+MAIL_FROM=hello@wedesygn.com
 ```
 
 `CORS_ORIGIN` accepts `*`, one origin, or a comma-separated list of allowed origins. The API reads `.env` from the directory one level above `public_html` (preferred), or from `public_html` as a local-development fallback. Hosting-provided environment variables take precedence. Never place `.env` inside `public_html` or commit it.
@@ -32,6 +34,8 @@ php scripts/init-db.php
 ```
 
 The table columns are `id`, `name`, `email`, `interested_in`, `budget_in_usd`, `project_details`, `created_at`, and `updated_at`. Email addresses are unique.
+
+After saving a contact submission, the API sends one notification to every valid address in `MAIL_TO`. Keep `MAIL_FROM` on the same domain as the website for better deliverability. The database save succeeds even if the hosting mail service temporarily rejects the notification; the failure is written to the PHP error log.
 
 ## Local Development
 

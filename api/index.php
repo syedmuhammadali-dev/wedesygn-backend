@@ -48,6 +48,56 @@ function requestPath(): string
     return rtrim(is_string($path) ? $path : '/', '/') ?: '/';
 }
 
+function notificationRecipients(): array
+{
+    $configured = getenv('MAIL_TO') ?: 'hello@wedesygn.com,wedesygnofficial@gmail.com';
+    $recipients = [];
+    foreach (explode(',', $configured) as $recipient) {
+        $recipient = trim($recipient);
+        if (filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            $recipients[] = $recipient;
+        }
+    }
+
+    return array_values(array_unique($recipients));
+}
+
+function sendUserNotification(string $name, string $email, ?string $interestedIn, ?string $budgetInUsd, ?string $projectDetails): bool
+{
+    $recipients = notificationRecipients();
+    if ($recipients === []) {
+        error_log('User notification skipped: no valid MAIL_TO recipients configured');
+        return false;
+    }
+
+    $from = getenv('MAIL_FROM') ?: 'hello@wedesygn.com';
+    if (!filter_var($from, FILTER_VALIDATE_EMAIL)) {
+        $from = 'hello@wedesygn.com';
+    }
+
+    $subject = 'New project enquiry — Wedesygn';
+    $message = implode("\n", [
+        'A new project enquiry was submitted on wedesygn.com.',
+        '',
+        'Name: ' . $name,
+        'Email: ' . $email,
+        'Interested in: ' . ($interestedIn ?: 'Not provided'),
+        'Budget: ' . ($budgetInUsd ?: 'Not provided'),
+        '',
+        'Project details:',
+        $projectDetails ?: 'Not provided',
+    ]);
+    $headers = implode("\r\n", [
+        'From: Wedesygn <' . $from . '>',
+        'Reply-To: ' . $email,
+        'MIME-Version: 1.0',
+        'Content-Type: text/plain; charset=UTF-8',
+        'X-Mailer: Wedesygn PHP backend',
+    ]);
+
+    return mail(implode(',', $recipients), $subject, $message, $headers);
+}
+
 $allowedOrigins = array_filter(array_map('trim', explode(',', getenv('CORS_ORIGIN') ?: '*')));
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if ($origin !== '' && (in_array('*', $allowedOrigins, true) || in_array($origin, $allowedOrigins, true))) {
@@ -141,8 +191,14 @@ if (in_array($path, ['/api/users', '/api/create-user'], true) && $method === 'PO
             ':projectDetails' => $projectDetails ?: null,
         ]);
 
+        $notificationSent = sendUserNotification($name, $email, $interestedIn, $budgetInUsd, $projectDetails);
+        if (!$notificationSent) {
+            error_log('User details saved, but notification email could not be sent for ' . $email);
+        }
+
         respond(201, [
             'message' => 'User details saved successfully',
+            'notificationSent' => $notificationSent,
             'user' => [
                 'id' => (int) database()->lastInsertId(),
                 'name' => $name,
