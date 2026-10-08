@@ -35,7 +35,9 @@ php scripts/init-db.php
 
 The table columns are `id`, `name`, `email`, `interested_in`, `budget_in_usd`, `project_details`, `created_at`, and `updated_at`. Email addresses are unique.
 
-After saving a contact submission, the API sends one notification to every valid address in `MAIL_TO`. Keep `MAIL_FROM` on the same domain as the website for better deliverability. The database save succeeds even if the hosting mail service temporarily rejects the notification; the failure is written to the PHP error log.
+After saving a contact submission, the API sends one notification to every valid address in `MAIL_TO` (default: `hello@wedesygn.com` and `wedesygnofficial@gmail.com`). The reply-to header is the visitor's email. By default the mail goes out through PHP `mail()`; set `SMTP_HOST`, `SMTP_PORT` (465 = `ssl`, 587 = `tls`), `SMTP_USER` and `SMTP_PASSWORD` to send through a real mailbox instead (recommended for deliverability: add SPF, DKIM and DMARC records for the domain as well). If SMTP is configured but fails, the API falls back to `mail()`. The database save succeeds even if the notification fails; the failure is written to the PHP error log and the response contains `notificationSent: false`.
+
+The same email address can submit more than once: `users` keeps one row per email (the latest enquiry), and every enquiry is still delivered by email. A repeat submission returns HTTP 200 with `returningVisitor: true`; a new one returns 201.
 
 ## Local Development
 

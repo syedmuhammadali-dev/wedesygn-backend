@@ -4,6 +4,6 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
 
-<Files "env.php">
+<FilesMatch "^(env|mailer)\.php$">
 	Require all denied
-</Files>
+</FilesMatch>

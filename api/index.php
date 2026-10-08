@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/env.php';
+require_once __DIR__ . '/mailer.php';
 
 function respond(int $status, array $body): void
 {
@@ -46,56 +47,6 @@ function requestPath(): string
 {
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
     return rtrim(is_string($path) ? $path : '/', '/') ?: '/';
-}
-
-function notificationRecipients(): array
-{
-    $configured = getenv('MAIL_TO') ?: 'hello@wedesygn.com,wedesygnofficial@gmail.com';
-    $recipients = [];
-    foreach (explode(',', $configured) as $recipient) {
-        $recipient = trim($recipient);
-        if (filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
-            $recipients[] = $recipient;
-        }
-    }
-
-    return array_values(array_unique($recipients));
-}
-
-function sendUserNotification(string $name, string $email, ?string $interestedIn, ?string $budgetInUsd, ?string $projectDetails): bool
-{
-    $recipients = notificationRecipients();
-    if ($recipients === []) {
-        error_log('User notification skipped: no valid MAIL_TO recipients configured');
-        return false;
-    }
-
-    $from = getenv('MAIL_FROM') ?: 'hello@wedesygn.com';
-    if (!filter_var($from, FILTER_VALIDATE_EMAIL)) {
-        $from = 'hello@wedesygn.com';
-    }
-
-    $subject = 'New project enquiry — wedesygn';
-    $message = implode("\n", [
-        'A new project enquiry was submitted on wedesygn.com.',
-        '',
-        'Name: ' . $name,
-        'Email: ' . $email,
-        'Interested in: ' . ($interestedIn ?: 'Not provided'),
-        'Budget: ' . ($budgetInUsd ?: 'Not provided'),
-        '',
-        'Project details:',
-        $projectDetails ?: 'Not provided',
-    ]);
-    $headers = implode("\r\n", [
-        'From: wedesygn <' . $from . '>',
-        'Reply-To: ' . $email,
-        'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'X-Mailer: wedesygn PHP backend',
-    ]);
-
-    return mail(implode(',', $recipients), $subject, $message, $headers);
 }
 
 $allowedOrigins = array_filter(array_map('trim', explode(',', getenv('CORS_ORIGIN') ?: '*')));
@@ -181,7 +132,14 @@ if (in_array($path, ['/api/users', '/api/create-user'], true) && $method === 'PO
     try {
         $statement = database()->prepare(
             'INSERT INTO users (name, email, interested_in, budget_in_usd, project_details)
-             VALUES (:name, :email, :interestedIn, :budgetInUsd, :projectDetails)'
+             VALUES (:name, :email, :interestedIn, :budgetInUsd, :projectDetails)
+             ON DUPLICATE KEY UPDATE
+                id = LAST_INSERT_ID(id),
+                name = VALUES(name),
+                interested_in = VALUES(interested_in),
+                budget_in_usd = VALUES(budget_in_usd),
+                project_details = VALUES(project_details),
+                updated_at = CURRENT_TIMESTAMP'
         );
         $statement->execute([
             ':name' => $name,
@@ -196,8 +154,11 @@ if (in_array($path, ['/api/users', '/api/create-user'], true) && $method === 'PO
             error_log('User details saved, but notification email could not be sent for ' . $email);
         }
 
-        respond(201, [
+        // rowCount(): 1 = new row, 2 = an existing row for this email was updated with the new enquiry.
+        $isNew = $statement->rowCount() === 1;
+        respond($isNew ? 201 : 200, [
             'message' => 'User details saved successfully',
+            'returningVisitor' => !$isNew,
             'notificationSent' => $notificationSent,
             'user' => [
                 'id' => (int) database()->lastInsertId(),
