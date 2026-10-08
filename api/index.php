@@ -60,14 +60,26 @@ function failureReason(Throwable $error): string
         if ($sqlState === '42S22' || $driverCode === 1054) {
             return 'column_missing';
         }
-        if ($driverCode === 1045 || $driverCode === 1044 || $sqlState === '28000') {
+        if ($driverCode === 1045 || $driverCode === 1044) {
             return 'database_access_denied';
+        }
+        if ($driverCode === 1130 || $driverCode === 1129) {
+            return 'database_host_not_allowed';
         }
         if ($driverCode === 1049) {
             return 'database_not_found';
         }
-        if (in_array($driverCode, [2002, 2003, 2006, 2013], true) || $sqlState === 'HY000') {
+        if (in_array($driverCode, [2002, 2003], true)) {
             return 'database_unreachable';
+        }
+        if (in_array($driverCode, [2006, 2013], true)) {
+            return 'database_connection_dropped';
+        }
+        if (in_array($driverCode, [2026, 2054], true)) {
+            return 'database_tls_or_auth_mismatch';
+        }
+        if ($sqlState === '0' && $driverCode === 0 && stripos($error->getMessage(), 'could not find driver') !== false) {
+            return 'pdo_mysql_missing';
         }
         return 'database_error';
     }
@@ -208,7 +220,7 @@ if (in_array($path, ['/api/users', '/api/create-user'], true) && $method === 'PO
             respond(409, ['error' => 'A user with this email already exists']);
         }
         error_log('User creation failed: ' . $error->getMessage());
-        respond(500, ['error' => 'Unable to save user details', 'reason' => failureReason($error)]);
+        respond(500, ['error' => 'Unable to save user details', 'reason' => failureReason($error), 'code' => (int) ($error->errorInfo[1] ?? 0)]);
     } catch (Throwable $error) {
         error_log('User creation failed: ' . $error->getMessage());
         respond(500, ['error' => 'Unable to save user details', 'reason' => failureReason($error)]);
