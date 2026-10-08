@@ -49,6 +49,35 @@ function requestPath(): string
     return rtrim(is_string($path) ? $path : '/', '/') ?: '/';
 }
 
+function failureReason(Throwable $error): string
+{
+    if ($error instanceof PDOException) {
+        $sqlState = (string) $error->getCode();
+        $driverCode = (int) ($error->errorInfo[1] ?? 0);
+        if ($sqlState === '42S02' || $driverCode === 1146) {
+            return 'table_missing';
+        }
+        if ($sqlState === '42S22' || $driverCode === 1054) {
+            return 'column_missing';
+        }
+        if ($driverCode === 1045 || $driverCode === 1044 || $sqlState === '28000') {
+            return 'database_access_denied';
+        }
+        if ($driverCode === 1049) {
+            return 'database_not_found';
+        }
+        if (in_array($driverCode, [2002, 2003, 2006, 2013], true) || $sqlState === 'HY000') {
+            return 'database_unreachable';
+        }
+        return 'database_error';
+    }
+    if ($error instanceof RuntimeException && str_starts_with($error->getMessage(), 'Missing database environment')) {
+        return 'database_not_configured';
+    }
+
+    return 'server_error';
+}
+
 $allowedOrigins = array_filter(array_map('trim', explode(',', getenv('CORS_ORIGIN') ?: '*')));
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if ($origin !== '' && (in_array('*', $allowedOrigins, true) || in_array($origin, $allowedOrigins, true))) {
@@ -149,7 +178,12 @@ if (in_array($path, ['/api/users', '/api/create-user'], true) && $method === 'PO
             ':projectDetails' => $projectDetails ?: null,
         ]);
 
-        $notificationSent = sendUserNotification($name, $email, $interestedIn, $budgetInUsd, $projectDetails);
+        try {
+            $notificationSent = sendUserNotification($name, $email, $interestedIn, $budgetInUsd, $projectDetails);
+        } catch (Throwable $mailError) {
+            error_log('Notification email threw: ' . $mailError->getMessage());
+            $notificationSent = false;
+        }
         if (!$notificationSent) {
             error_log('User details saved, but notification email could not be sent for ' . $email);
         }
@@ -174,10 +208,10 @@ if (in_array($path, ['/api/users', '/api/create-user'], true) && $method === 'PO
             respond(409, ['error' => 'A user with this email already exists']);
         }
         error_log('User creation failed: ' . $error->getMessage());
-        respond(500, ['error' => 'Unable to save user details']);
+        respond(500, ['error' => 'Unable to save user details', 'reason' => failureReason($error)]);
     } catch (Throwable $error) {
         error_log('User creation failed: ' . $error->getMessage());
-        respond(500, ['error' => 'Unable to save user details']);
+        respond(500, ['error' => 'Unable to save user details', 'reason' => failureReason($error)]);
     }
 }
 
