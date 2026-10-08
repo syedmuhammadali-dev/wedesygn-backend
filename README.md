@@ -25,7 +25,7 @@ MAIL_TO=hello@wedesygn.com,wedesygnofficial@gmail.com
 MAIL_FROM=hello@wedesygn.com
 ```
 
-`CORS_ORIGIN` accepts `*`, one origin, or a comma-separated list of allowed origins. The API reads `.env` from the directory one level above `public_html` (preferred), or from `public_html` as a local-development fallback. Hosting-provided environment variables take precedence. Never place `.env` inside `public_html` or commit it.
+`CORS_ORIGIN` accepts `*`, one origin, or a comma-separated list of allowed origins. Each origin must be written exactly as the browser sends it: scheme and host only, no path and **no trailing slash** (for example `https://wedesygn.vercel.app`). The production site calls the API on its own domain, so it does not need CORS; the list matters for other frontends such as the Vercel staging site or local development. The API reads `.env` from the directory one level above `public_html` (preferred), or from `public_html` as a local-development fallback. Hosting-provided environment variables take precedence. Never place `.env` inside `public_html` or commit it.
 
 Create the `users` table after setting the database variables:
 
