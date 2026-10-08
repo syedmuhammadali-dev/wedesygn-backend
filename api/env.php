@@ -1,6 +1,19 @@
 <?php
 declare(strict_types=1);
 
+function environmentReport(?string $file = null, ?string $overriddenKey = null): array
+{
+    static $report = ['usedFile' => null, 'keysFromHostEnvironment' => []];
+    if ($file !== null) {
+        $report['usedFile'] = $file;
+    }
+    if ($overriddenKey !== null) {
+        $report['keysFromHostEnvironment'][] = $overriddenKey;
+    }
+
+    return $report;
+}
+
 function loadEnvironmentFile(): void
 {
     static $loaded = false;
@@ -35,7 +48,11 @@ function loadEnvironmentFile(): void
             }
 
             $key = trim(substr($line, 0, $separator));
-            if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $key) || getenv($key) !== false) {
+            if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $key)) {
+                continue;
+            }
+            if (getenv($key) !== false) {
+                environmentReport(null, $key);
                 continue;
             }
 
@@ -56,6 +73,7 @@ function loadEnvironmentFile(): void
             $_SERVER[$key] = $value;
         }
 
+        environmentReport($path === $paths[0] ? 'folder above public_html' : 'public_html');
         return;
     }
 }

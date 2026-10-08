@@ -90,6 +90,43 @@ function failureReason(Throwable $error): string
     return 'server_error';
 }
 
+function databaseDiagnostics(): array
+{
+    $length = static fn(string $value): string => $value === '' ? '(empty)' : strlen($value) . ' characters';
+    $environment = environmentReport();
+    $report = [
+        'envFileUsed' => $environment['usedFile'] ?? 'none found',
+        'keysProvidedByHostEnvironment' => $environment['keysFromHostEnvironment'],
+        'config' => [
+            'DB_HOST' => getenv('DB_HOST') ?: '(missing)',
+            'DB_PORT' => getenv('DB_PORT') ?: '(missing - 3306 would be used)',
+            'DB_NAME' => $length((string) getenv('DB_NAME')),
+            'DB_USER' => $length((string) getenv('DB_USER')),
+            'DB_PASSWORD' => $length((string) getenv('DB_PASSWORD')),
+        ],
+        'php' => ['version' => PHP_VERSION, 'pdo_mysql' => extension_loaded('pdo_mysql')],
+    ];
+
+    try {
+        $pdo = database();
+        $report['connected'] = true;
+        $report['serverVersion'] = $pdo->getAttribute(PDO::ATTR_SERVER_VERSION);
+        $report['usersTableExists'] = (bool) $pdo->query("SHOW TABLES LIKE 'users'")->fetchColumn();
+    } catch (Throwable $error) {
+        $message = $error->getMessage();
+        foreach (['DB_PASSWORD', 'DB_USER', 'DB_NAME'] as $key) {
+            $secret = (string) getenv($key);
+            if ($secret !== '') {
+                $message = str_replace($secret, '***', $message);
+            }
+        }
+        $report['connected'] = false;
+        $report['error'] = ['reason' => failureReason($error), 'code' => (int) ($error->errorInfo[1] ?? 0), 'message' => mb_substr($message, 0, 300)];
+    }
+
+    return $report;
+}
+
 $allowedOrigins = array_filter(array_map('trim', explode(',', getenv('CORS_ORIGIN') ?: '*')));
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if ($origin !== '' && (in_array('*', $allowedOrigins, true) || in_array($origin, $allowedOrigins, true))) {
@@ -110,6 +147,15 @@ if ($method === 'OPTIONS') {
 }
 
 $path = requestPath();
+if ($path === '/api/health' && $method === 'GET' && ($_GET['check'] ?? '') === 'db') {
+    // Admin-only connection check: shows which .env was read and why the database cannot be reached.
+    $adminKey = getenv('ADMIN_API_KEY');
+    if (!$adminKey || !hash_equals($adminKey, $_SERVER['HTTP_X_ADMIN_KEY'] ?? '')) {
+        respond(401, ['error' => 'Unauthorized']);
+    }
+    respond(200, databaseDiagnostics());
+}
+
 if ($path === '/api/health' && $method === 'GET') {
     respond(200, [
         'status' => 'ok',
