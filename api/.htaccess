@@ -7,3 +7,11 @@ RewriteRule ^ index.php [QSA,L]
 <FilesMatch "^(env|mailer)\.php$">
 	Require all denied
 </FilesMatch>
+
+# API responses are dynamic: never cache them (the site-wide rule caches JSON for a day).
+<IfModule mod_expires.c>
+	ExpiresActive Off
+</IfModule>
+<IfModule mod_headers.c>
+	Header set Cache-Control "no-store"
+</IfModule>

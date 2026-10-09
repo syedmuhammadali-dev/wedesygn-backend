@@ -37,6 +37,8 @@ The table columns are `id`, `name`, `email`, `interested_in`, `budget_in_usd`, `
 
 After saving a contact submission, the API sends one notification to every valid address in `MAIL_TO` (default: `hello@wedesygn.com` and `wedesygnofficial@gmail.com`). The reply-to header is the visitor's email. By default the mail goes out through PHP `mail()`; set `SMTP_HOST`, `SMTP_PORT` (465 = `ssl`, 587 = `tls`), `SMTP_USER` and `SMTP_PASSWORD` to send through a real mailbox instead (recommended for deliverability: add SPF, DKIM and DMARC records for the domain as well). If SMTP is configured but fails, the API falls back to `mail()`. The database save succeeds even if the notification fails; the failure is written to the PHP error log and the response contains `notificationSent: false`.
 
+The database is best effort and the email is the primary channel: if the database cannot be reached the enquiry is still emailed and the API answers `202` with `saved: false`; the request only fails (`500`, with a coarse `reason` and the MySQL `code`) when both the database and the email fail. API responses are sent with `Cache-Control: no-store`. `GET /api/health?check=db` (header `X-Admin-Key`) reports which `.env` was read, whether the database and some alternative hosts/ports are reachable from the web server, and whether outbound SMTP ports are open.
+
 The same email address can submit more than once: `users` keeps one row per email (the latest enquiry), and every enquiry is still delivered by email. A repeat submission returns HTTP 200 with `returningVisitor: true`; a new one returns 201.
 
 ## Local Development

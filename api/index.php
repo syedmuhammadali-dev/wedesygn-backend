@@ -8,6 +8,7 @@ function respond(int $status, array $body): void
 {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
     echo json_encode($body, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
     exit;
 }
@@ -37,6 +38,7 @@ function database(): PDO
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_TIMEOUT => 5,
         ]
     );
 
@@ -148,6 +150,8 @@ function databaseDiagnostics(): array
         $report['network'][$label . ' (' . $host . ':' . $port . ')'] = $entry;
     }
     $report['network']['outbound https (1.1.1.1:443)'] = tcpProbe('1.1.1.1', 443);
+    $report['network']['outbound smtp (smtp.gmail.com:465)'] = tcpProbe('smtp.gmail.com', 465);
+    $report['network']['outbound smtp (smtp.gmail.com:587)'] = tcpProbe('smtp.gmail.com', 587);
     $report['network']['outbound high port (portquiz.net:' . $configuredPort . ')'] = tcpProbe('portquiz.net', $configuredPort);
 
     try {
@@ -259,6 +263,11 @@ if (in_array($path, ['/api/users', '/api/create-user'], true) && $method === 'PO
         respond(400, ['error' => 'A valid email is required']);
     }
 
+    // 1) Save to the database (best effort). 2) Email the enquiry. The enquiry only fails when BOTH fail.
+    $saved = false;
+    $isNew = true;
+    $userId = null;
+    $databaseError = null;
     try {
         $statement = database()->prepare(
             'INSERT INTO users (name, email, interested_in, budget_in_usd, project_details)
@@ -278,42 +287,47 @@ if (in_array($path, ['/api/users', '/api/create-user'], true) && $method === 'PO
             ':budgetInUsd' => $budgetInUsd ?: null,
             ':projectDetails' => $projectDetails ?: null,
         ]);
-
-        try {
-            $notificationSent = sendUserNotification($name, $email, $interestedIn, $budgetInUsd, $projectDetails);
-        } catch (Throwable $mailError) {
-            error_log('Notification email threw: ' . $mailError->getMessage());
-            $notificationSent = false;
-        }
-        if (!$notificationSent) {
-            error_log('User details saved, but notification email could not be sent for ' . $email);
-        }
-
         // rowCount(): 1 = new row, 2 = an existing row for this email was updated with the new enquiry.
         $isNew = $statement->rowCount() === 1;
-        respond($isNew ? 201 : 200, [
-            'message' => 'User details saved successfully',
-            'returningVisitor' => !$isNew,
-            'notificationSent' => $notificationSent,
-            'user' => [
-                'id' => (int) database()->lastInsertId(),
-                'name' => $name,
-                'email' => $email,
-                'interestedIn' => $interestedIn,
-                'budgetInUsd' => $budgetInUsd,
-                'projectDetails' => $projectDetails,
-            ],
-        ]);
-    } catch (PDOException $error) {
-        if ($error->getCode() === '23000') {
-            respond(409, ['error' => 'A user with this email already exists']);
-        }
-        error_log('User creation failed: ' . $error->getMessage());
-        respond(500, ['error' => 'Unable to save user details', 'reason' => failureReason($error), 'code' => (int) ($error->errorInfo[1] ?? 0)]);
+        $userId = (int) database()->lastInsertId();
+        $saved = true;
     } catch (Throwable $error) {
+        $databaseError = $error;
         error_log('User creation failed: ' . $error->getMessage());
-        respond(500, ['error' => 'Unable to save user details', 'reason' => failureReason($error)]);
     }
+
+    try {
+        $notificationSent = sendUserNotification($name, $email, $interestedIn, $budgetInUsd, $projectDetails);
+    } catch (Throwable $mailError) {
+        error_log('Notification email threw: ' . $mailError->getMessage());
+        $notificationSent = false;
+    }
+    if (!$notificationSent) {
+        error_log('Notification email could not be sent for ' . $email);
+    }
+
+    if (!$saved && !$notificationSent) {
+        respond(500, [
+            'error' => 'Unable to save user details',
+            'reason' => $databaseError ? failureReason($databaseError) : 'server_error',
+            'code' => $databaseError instanceof PDOException ? (int) ($databaseError->errorInfo[1] ?? 0) : 0,
+        ]);
+    }
+
+    respond($saved ? ($isNew ? 201 : 200) : 202, [
+        'message' => $saved ? 'User details saved successfully' : 'Enquiry received by email (database unavailable)',
+        'saved' => $saved,
+        'returningVisitor' => $saved && !$isNew,
+        'notificationSent' => $notificationSent,
+        'user' => [
+            'id' => $userId,
+            'name' => $name,
+            'email' => $email,
+            'interestedIn' => $interestedIn,
+            'budgetInUsd' => $budgetInUsd,
+            'projectDetails' => $projectDetails,
+        ],
+    ]);
 }
 
 if (in_array($path, ['/api/health', '/api/users', '/api/create-user'], true)) {
