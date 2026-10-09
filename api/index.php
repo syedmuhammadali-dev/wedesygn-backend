@@ -90,6 +90,19 @@ function failureReason(Throwable $error): string
     return 'server_error';
 }
 
+function tcpProbe(string $host, int $port): string
+{
+    $started = microtime(true);
+    $socket = @fsockopen($host, $port, $errno, $errstr, 4);
+    $ms = (int) round((microtime(true) - $started) * 1000);
+    if ($socket === false) {
+        return 'FAILED (' . ($errstr !== '' ? $errstr : 'error ' . $errno) . ', ' . $ms . ' ms)';
+    }
+    fclose($socket);
+
+    return 'open (' . $ms . ' ms)';
+}
+
 function databaseDiagnostics(): array
 {
     $length = static fn(string $value): string => $value === '' ? '(empty)' : strlen($value) . ' characters';
@@ -106,6 +119,36 @@ function databaseDiagnostics(): array
         ],
         'php' => ['version' => PHP_VERSION, 'pdo_mysql' => extension_loaded('pdo_mysql')],
     ];
+
+    // Fixed list of places to try from this server (never taken from the request). Shows whether the
+    // hosting blocks outbound database ports or whether a different host/port works.
+    $configuredHost = (string) getenv('DB_HOST');
+    $configuredPort = (int) (getenv('DB_PORT') ?: 3306);
+    $resolved = $configuredHost !== '' ? gethostbyname($configuredHost) : '';
+    $candidates = [
+        ['configured', $configuredHost, $configuredPort],
+        ['configured host, port 3306', $configuredHost, 3306],
+        ['resolved IPv4, configured port', $resolved, $configuredPort],
+        ['localhost, port 3306', '127.0.0.1', 3306],
+    ];
+    $report['network'] = ['configuredHostResolvesTo' => $resolved === $configuredHost ? '(does not resolve)' : $resolved];
+    foreach ($candidates as [$label, $host, $port]) {
+        if ($host === '') {
+            continue;
+        }
+        $entry = ['tcp' => tcpProbe($host, (int) $port)];
+        if (str_starts_with($entry['tcp'], 'open') && extension_loaded('pdo_mysql')) {
+            try {
+                new PDO("mysql:host={$host};port={$port};dbname=" . getenv('DB_NAME') . ';charset=utf8mb4', (string) getenv('DB_USER'), (string) getenv('DB_PASSWORD'), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 5]);
+                $entry['login'] = 'OK - this host/port works';
+            } catch (Throwable $error) {
+                $entry['login'] = 'failed, code ' . (int) ($error->errorInfo[1] ?? 0);
+            }
+        }
+        $report['network'][$label . ' (' . $host . ':' . $port . ')'] = $entry;
+    }
+    $report['network']['outbound https (1.1.1.1:443)'] = tcpProbe('1.1.1.1', 443);
+    $report['network']['outbound high port (portquiz.net:' . $configuredPort . ')'] = tcpProbe('portquiz.net', $configuredPort);
 
     try {
         $pdo = database();
